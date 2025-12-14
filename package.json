@@ -11,7 +11,13 @@
     "type": "git",
     "url": "git+https://github.com/juliodelimas/sw-tutorial.git"
   },
-  "keywords": ["ecommerce", "api", "express", "jwt", "rest"],
+  "keywords": [
+    "ecommerce",
+    "api",
+    "express",
+    "jwt",
+    "rest"
+  ],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
@@ -20,18 +26,19 @@
   },
   "homepage": "https://github.com/juliodelimas/sw-tutorial#readme",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.2",
-    "bcryptjs": "^2.4.3",
     "swagger-ui-express": "^5.0.0",
-    "yamljs": "^0.3.0",
-    "cors": "^2.8.5"
+    "yamljs": "^0.3.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.1",
-    "mocha": "^10.2.0",
-    "supertest": "^6.3.3",
+    "@faker-js/faker": "^10.1.0",
     "chai": "^4.1.0",
-    "mochawesome": "^7.1.3"
+    "mocha": "^10.2.0",
+    "mochawesome": "^7.1.3",
+    "nodemon": "^3.0.1",
+    "supertest": "^6.3.3"
   }
 }
