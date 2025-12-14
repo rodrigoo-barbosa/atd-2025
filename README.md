@@ -1,8 +1,258 @@
-# E-commerce REST API
+## Trabalho de Conclusão da Disciplina: Automação de Testes de Performance
+
+Este projeto foi desenvolvido como parte integral da avaliação final da disciplina de Automação de Testes de Performance, pertencente à pós-graduação em Automação de Testes de Software — Turma 2025.
+
+Abaixo seguem alguns conceitos empregados nos testes, adquiridos ao longo da disciplina.
+
+As informações sobre a API seguem logo abaixo da explicação destes conceitos.
+
+
+### 1. Thresholds (Limiares)
+Realizando uma comparação com uma corrida, onde queremos garantir que os corredores alcancem uma meta de tempo, na qual 95% deles devem terminar a corrida em menos de 2 minutos. No teste, thresholds são essas “metas de tempo” para as requisições. No código, definimos que 95% das respostas devem ser rápidas (menos de 2 segundos), e que pelo menos 95% dos testes devem passar.
+
+Aplicação no código de teste:
+```js
+thresholds: {
+  http_req_duration: ['p(95)<2000'],
+  'tempo_checkout': ['p(95)<2000'],
+  'checks': ['rate>0.95'],
+}
+```
+---
+### 2. Checks (Verificações)
+No teste, os "checks" estão sendo usados para validar automaticamente se cada etapa importante do fluxo foi bem-sucedida e estão estruturados da seguinte forma:
+
+**Cadastro do Usuário:**
+Verifica se o cadastro retornou status 201 (criado com sucesso).
+```js
+check(resposta, {
+  'Cadastro retornou 201': (r) => r.status === 201,
+});
+```
+
+**Login do Usuário:**
+Confere se o token de autenticação foi recebido e tem tamanho adequado.
+```js
+check(token, {
+  'Token recebido': (t) => typeof t === 'string' && t.length > 10,
+});
+```
+
+**Checkout (para cada cenário):**
+Valida se o checkout retornou status 200 ou 201 e se a resposta contém um ID.
+```js
+check(resposta, {
+  'Checkout retornou 200 ou 201': (r) => r.status === 200 || r.status === 201,
+  'Resposta contém ID': (r) => r.json('data.id') !== undefined,
+});
+```
+
+---
+### 3. Helpers
+Helpers são arquivos auxiliares que deixam o código mais limpo e fácil de entender. Neste projeto, modularizamos funções como `login`, `fakerHelper` (dados aleatórios) e `baseURL` com o objetivo de reaproveitar código.
+No teste, os helpers são importados e utilizados diretamente, evitando repetição.
+
+Exemplo de importação dos arquivos helpers no código de teste:
+```js
+import { getBaseURL } from './helpers/baseURL.js';
+import { gerarEmailAleatorio, gerarNomeAleatorio, gerarSenhaAleatoria } from './helpers/fakerHelper.js';
+import { login } from './helpers/login.js';
+```
+
+---
+### 4. Trends (Tendências)
+Trends são como um backlog de métricas customizadas, que anotam quanto tempo cada checkout levou. Assim, depois do teste, é possível analisar se o sistema ficou mais rápido ou mais lento.
+
+Aqui foi declarada a Trend:
+```js
+const tempoCheckout = new Trend('tempo_checkout');
+```
+
+E aqui a Trend é incrementada com a duração do checkout, permitindo análise de desempenho:
+```js
+tempoCheckout.add(resposta.timings.duration);
+```
+
+---
+### 5. Faker (Geração de Dados Aleatórios)
+
+Geração de dados aleatórios (nome, e-mail, senha) para simular usuários reais. Isso evita repetição e ajuda a encontrar problemas.
+
+Foi enfrentado um problema onde o K6 não suporta a biblioteca Faker.js original porque ela depende de recursos do Node.js que não estão disponíveis no ambiente do K6.
+Para contornar isso, foi utilizado funções helpers próprias, para gerar dados aleatórios como nomes, e-mails e senhas dentro do teste, sem depender do Faker.js original.
+
+Para isso foram criadas funções helpers e importadas no arquivo de teste, recebendo os parâmetros correspondentes.
+
+Aplicação no código de teste:
+```js
+const email = gerarEmailAleatorio();
+const senha = gerarSenhaAleatoria();
+const nome = gerarNomeAleatorio();
+```
+
+---
+### 6. Variável de Ambiente
+
+Utilziar variável de ambiente torna o teste mais flexível e reutilizável, pois você pode mudar configurações (por exemplo, rodar em diferentes ambientes) sem alterar o código, apenas informando a variável ao executar o teste.
+
+Foi criado um helper `baseURL.js`, importado no teste e utilizado quando necessário.
+
+Aplicação no código de teste:
+```js
+getBaseURL(); // Usa __ENV.BASE_URL se definido
+check(__ENV.BASE_URL, { 'BASE_URL está definida': (v) => v !== undefined });
+```
+
+---
+### 7. Stages
+
+Este conceito simula o fluxo de acesso flutuante do usuários, por exemplo começando devagar, aumentando a quantidade de usuários, depois diminuindo, desta forma é possível simular o movimento de pessoas entrando e saindo da loja.
+
+Aplicação no código de teste:
+```js
+stages: [
+  { duration: '5s', target: 1 },
+  { duration: '10s', target: 1 },
+  { duration: '5s', target: 0 },
+]
+```
+
+---
+### 8. Reaproveitamento de Resposta
+Neste conceito, o teste salva a resposta do checkout e faz verificações extras nela no final.
+
+Na implementação, o `check` valida a resposta da última requisição de checkout. Verifica se `respostaCheckout` existe e se o status é 200 ou 201, indicando sucesso.
+
+Aplicação no código de teste:
+```js
+ group('Validação da resposta do último checkout', function () {
+        check(respostaCheckout, {
+            'Checkout tem status 200 ou 201': (r) => r && (r.status === 200 || r.status === 201),
+        });
+    });
+```
+---
+### 9. Uso de Token de Autenticação
+O token é a “chave” que permite acessar áreas protegidas. O teste faz login, pega o token e usa ele para fazer o checkout, simulando um usuário real.
+
+Aplicação no código de teste:
+```js
+'Authorization': `Bearer ${token}`
+```
+---
+### 10. Data-Driven Testing (Teste Orientado a Dados)
+
+Neste projeto de teste, o conceito de Data-Driven Testing está sendo aplicado ao separar os dados do fluxo e iterar sobre eles para executar o mesmo teste com variações controladas.
+
+O fluxo do teste basicamente:
+
+Aplicação no código de teste:
+```js
+cenariosCheckout.forEach((cenario) => {
+  group(`Checkout Produto ${cenario.produtoId} (${cenario.metodoPagamento})`, function () {
+    const payload = JSON.stringify({
+      items: [{ productId: cenario.produtoId, quantity: cenario.quantidade }],
+      paymentMethod: cenario.metodoPagamento
+    });
+    const resposta = http.post(`${getBaseURL()}/checkout`, payload, {
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+    });
+    tempoCheckout.add(resposta.timings.duration);
+    check(resposta, {
+      'Checkout retornou 200 ou 201': (r) => r.status === 200 || r.status === 201,
+      'Resposta contém ID': (r) => r.json('data.id') !== undefined,
+    });
+  });
+});
+```
+### 11. Groups (Agrupamentos)
+Groups são como capítulos de um livro: cada parte do teste (cadastro, login, checkout) fica organizada, facilitando a leitura dos resultados.
+
+Neste projeto de teste, foram criadas seções nomeadas no relatório, separando cada etapa do restante do teste.
+Dentro delas, os `checks` validam as respostas e deixam claro, por grupo, o sucesso de cada fase.
+
+Aplicação no código de teste:
+```js
+  group('Cadastro do Usuário', function () {
+        const url = `${getBaseURL()}/auth/register`;
+        const payload = JSON.stringify({ email, password: senha, name: nome });
+        const params = { headers: { 'Content-Type': 'application/json' } };
+        const resposta = http.post(url, payload, params);
+        check(resposta, {
+            'Cadastro retornou 201': (r) => r.status === 201,
+        });
+    });
+
+...
+
+ group('Login do Usuário', function () {
+        token = login(email, senha);
+        check(token, {
+            'Token recebido': (t) => typeof t === 'string' && t.length > 10,
+        });
+    });
+
+...
+
+group(`Checkout Produto ${cenario.produtoId} (${cenario.metodoPagamento})`, function () {
+            const url = `${getBaseURL()}/checkout`;
+            const payload = JSON.stringify({
+                items: [{ productId: cenario.produtoId, quantity: cenario.quantidade }],
+                paymentMethod: cenario.metodoPagamento
+            });
+            const params = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`,
+                },
+            };
+            const resposta = http.post(url, payload, params);
+            respostaCheckout = resposta; // Reaproveitamento de resposta
+            tempoCheckout.add(resposta.timings.duration); // Trend
+            check(resposta, {
+                'Checkout retornou 200 ou 201': (r) => r.status === 200 || r.status === 201,
+                'Resposta contém ID': (r) => r.json('data.id') !== undefined,
+     });
+  });   
+```
+---
+### Comando para executar o teste de performance com base URL customizada
+```bash
+k6 run --env BASE_URL=http://localhost:3000 tests/k6/checkout.test.js
+```
+---
+### Relatório HTML do k6
+
+O teste gera um relatório HTML ao final da execução usando `handleSummary` e o pacote comunitário `k6-reporter`.
+
+Aplicação no código de teste:
+```js
+import { htmlReport } from 'https://raw.githubusercontent.com/benc-uk/k6-reporter/main/dist/bundle.js';
+
+export function handleSummary(data) {
+  return {
+    'reports/checkout.html': htmlReport(data),
+  };
+}
+```
+
+Como executar e visualizar:
+```bash
+k6 run --env BASE_URL=http://localhost:3000 tests/k6/checkout.test.js
+```
+
+- Abra o arquivo gerado: reports/checkout.html
+
+         
+----
+
+# Informaçoes sobre a API Utilizada
+
+## E-commerce REST API
 
 A simple e-commerce REST API built with JavaScript and Express.js that allows users to register, login with JWT authentication, and perform checkouts with cash or credit card payments.
 
-## Description
+#### Description
 
 This API provides a complete e-commerce backend solution with the following features:
 - User registration and authentication using JWT tokens
@@ -12,7 +262,7 @@ This API provides a complete e-commerce backend solution with the following feat
 - Health check endpoint for monitoring
 - Complete API documentation with Swagger UI
 
-## Installation
+#### Installation
 
 1. Clone the repository:
 ```bash
@@ -25,67 +275,67 @@ cd atd-2025
 npm install
 ```
 
-## How to Run
+### How to Run
 
-### Development Mode
+#### Development Mode
 ```bash
 npm run dev
 ```
 
-### Production Mode
+#### Production Mode
 ```bash
 npm start
 ```
 
 The server will start on `http://localhost:3000` by default.
 
-## Rules
+### Rules
 
-### Checkout Rules
+#### Checkout Rules
 - **Payment Methods**: Only cash and credit card are accepted
 - **Cash Discount**: Cash payments receive a 10% discount
 - **Authentication**: Only authenticated users can perform checkout
 - **Product Validation**: Products must exist and have sufficient stock
 
-### API Rules
+#### API Rules
 - **Endpoints**: Only 4 endpoints are available (login, register, checkout, healthcheck)
 - **Data Storage**: Everything runs in memory (no database)
 - **JWT Authentication**: Required for checkout endpoint
 - **Input Validation**: All inputs are validated for security
 
-## Data Already Existent
+### Data Already Existent
 
-### Users (3 default users)
+#### Users (3 default users)
 | ID | Email | Password | Name |
 |----|-------|----------|------|
 | 1 | john@example.com | password123 | John Doe |
 | 2 | jane@example.com | password456 | Jane Smith |
 | 3 | bob@example.com | password789 | Bob Johnson |
 
-### Products (3 default products)
+#### Products (3 default products)
 | ID | Name | Description | Price | Stock |
 |----|------|-------------|-------|-------|
 | 1 | Laptop | High-performance laptop for work and gaming | $999.99 | 50 |
 | 2 | Smartphone | Latest model smartphone with advanced features | $699.99 | 30 |
 | 3 | Headphones | Wireless noise-canceling headphones | $199.99 | 100 |
 
-## How to Use the REST API
+### How to Use the REST API
 
-### Base URL
+#### Base URL
 ```
 http://localhost:3000
 ```
 
-### API Documentation
+#### API Documentation
 Visit `http://localhost:3000/api-docs` for interactive Swagger documentation.
 
-### Authentication
+#### Authentication
 Most endpoints require a JWT token in the Authorization header:
 ```
 Authorization: Bearer <your-jwt-token>
 ```
 
-### Endpoints
+#### Endpoints
 
 #### 1. Register User
 **POST** `/auth/register`
@@ -145,7 +395,7 @@ Authenticate user and receive JWT token.
 }
 ```
 
-#### 3. Checkout
+##### 3. Checkout
 **POST** `/checkout`
 
 Process a checkout with items and payment method. **Requires authentication.**
@@ -206,7 +456,7 @@ Authorization: Bearer <your-jwt-token>
 }
 ```
 
-#### 4. Health Check
+##### 4. Health Check
 **GET** `/health`
 
 Check the health status of the API.
@@ -235,7 +485,7 @@ Check the health status of the API.
 }
 ```
 
-#### 5. Get All Products
+##### 5. Get All Products
 **GET** `/products`
 
 Returns a list of all products. **Requires authentication.**
@@ -278,7 +528,7 @@ Authorization: Bearer <your-jwt-token>
 }
 ```
 
-#### 6. Create Product
+##### 6. Create Product
 **POST** `/products`
 
 Creates a new product. **Requires authentication.**
@@ -313,9 +563,9 @@ Authorization: Bearer <your-jwt-token>
 }
 ```
 
-### Example Usage with cURL
+#### Example Usage with cURL
 
-#### Register a new user:
+##### Register a new user:
 ```bash
 curl -X POST http://localhost:3000/auth/register \
   -H "Content-Type: application/json" \
@@ -326,7 +576,7 @@ curl -X POST http://localhost:3000/auth/register \
   }'
 ```
 
-#### Login:
+##### Login:
 ```bash
 curl -X POST http://localhost:3000/auth/login \
   -H "Content-Type: application/json" \
@@ -336,7 +586,7 @@ curl -X POST http://localhost:3000/auth/login \
   }'
 ```
 
-#### Checkout (replace TOKEN with actual JWT token):
+##### Checkout (replace TOKEN with actual JWT token):
 ```bash
 curl -X POST http://localhost:3000/checkout \
   -H "Content-Type: application/json" \
@@ -352,18 +602,18 @@ curl -X POST http://localhost:3000/checkout \
   }'
 ```
 
-#### Health check:
+##### Health check:
 ```bash
 curl -X GET http://localhost:3000/health
 ```
 
-#### Get all products (replace TOKEN with actual JWT token):
+##### Get all products (replace TOKEN with actual JWT token):
 ```bash
 curl -X GET http://localhost:3000/products \
   -H "Authorization: Bearer TOKEN"
 ```
 
-#### Create a new product (replace TOKEN with actual JWT token):
+##### Create a new product (replace TOKEN with actual JWT token):
 ```bash
 curl -X POST http://localhost:3000/products \
   -H "Content-Type: application/json" \
@@ -376,7 +626,7 @@ curl -X POST http://localhost:3000/products \
   }'
 ```
 
-### Error Responses
+#### Error Responses
 
 All endpoints return consistent error responses:
 
@@ -394,7 +644,7 @@ Common HTTP status codes:
 - `404` - Not Found (endpoint not found)
 - `500` - Internal Server Error
 
-## Project Structure
+### Project Structure
 
 ```
 src/
@@ -418,7 +668,7 @@ src/
 └── app.js              # Main application file
 ```
 
-## Technologies Used
+### Technologies Used
 
 - **Node.js** - Runtime environment
 - **Express.js** - Web framework
@@ -428,147 +678,5 @@ src/
 - **CORS** - Cross-origin resource sharing
 - **YAML** - Swagger specification
 
-## License
-
+### License
 ISC License
-
-## Teste de Performance com K6: Explicação dos Conceitos
-
-
-## Teste de Performance com K6: Conceitos Explicados de Forma Lúdica
-
-Se você está começando com testes de performance usando K6, aqui vai uma explicação lúdica e didática de cada conceito aplicado no teste checkout.test.js:
-
----
-
-### 1. Thresholds (Limiares)
-Imagine que você está em uma corrida e quer garantir que 95% dos corredores terminem em menos de 2 minutos. No teste, thresholds são essas “metas de tempo” para as requisições. No código, definimos que 95% das respostas devem ser rápidas (menos de 2 segundos), e que pelo menos 95% dos testes devem passar.
-
-```js
-thresholds: {
-  http_req_duration: ['p(95)<2000'],
-  'tempo_checkout': ['p(95)<2000'],
-  'checks': ['rate>0.95'],
-}
-```
-
----
-
-### 2. Checks (Verificações)
-Checks são como fiscais que conferem se tudo está certo após cada etapa. Eles verificam, por exemplo, se o cadastro retornou sucesso, se o login trouxe um token e se o checkout foi realizado corretamente.
-
-```js
-check(resposta, { 'Cadastro retornou 201': (r) => r.status === 201 });
-check(token, { 'Token recebido': (t) => typeof t === 'string' && t.length > 10 });
-check(resposta, { 'Checkout retornou 200 ou 201': (r) => r.status === 200 || r.status === 201 });
-```
-
----
-
-### 3. Helpers (Ajudantes)
-Helpers são como pequenos robôs que fazem tarefas repetitivas para você: gerar dados aleatórios, montar a URL base, fazer login, etc. Eles deixam o código mais limpo e fácil de entender.
-
-```js
-import { getBaseURL } from './helpers/baseURL.js';
-import { gerarEmailAleatorio, gerarNomeAleatorio, gerarSenhaAleatoria } from './helpers/fakerHelper.js';
-import { login } from './helpers/login.js';
-```
-
----
-
-### 4. Trends (Tendências)
-Trends são como um diário que anota quanto tempo cada checkout levou. Assim, depois do teste, você pode ver se o sistema ficou mais rápido ou mais lento.
-
-```js
-const tempoCheckout = new Trend('tempo_checkout');
-tempoCheckout.add(resposta.timings.duration);
-```
-
----
-
-### 5. Faker (Geração de Dados Aleatórios)
-Faker é o mágico que cria nomes, e-mails e senhas diferentes a cada teste, simulando usuários reais. Isso evita que os testes fiquem repetitivos e ajuda a encontrar problemas.
-
-```js
-const email = gerarEmailAleatorio();
-const senha = gerarSenhaAleatoria();
-const nome = gerarNomeAleatorio();
-```
-
----
-
-### 6. Variável de Ambiente
-É como um post-it na sua mesa dizendo “hoje teste no servidor X”. Usamos variáveis de ambiente para mudar a URL da API sem mexer no código.
-
-```js
-getBaseURL() // Usa __ENV.BASE_URL se definido
-check(__ENV.BASE_URL, { 'BASE_URL está definida': (v) => v !== undefined });
-```
-
----
-
-### 7. Stages (Estágios)
-Stages são o roteiro do teste: “comece devagar, aumente a quantidade de usuários, depois diminua”. Assim, você simula o movimento de pessoas entrando e saindo da loja.
-
-```js
-stages: [
-  { duration: '5s', target: 1 },
-  { duration: '10s', target: 1 },
-  { duration: '5s', target: 0 },
-]
-```
-
----
-
-### 8. Reaproveitamento de Resposta
-É como guardar o recibo da última compra para conferir depois. O teste salva a resposta do checkout e faz verificações extras nela no final.
-
-```js
-respostaCheckout = resposta; // Salva última resposta
-check(respostaCheckout, { 'Checkout tem status 200 ou 201': ... });
-```
-
----
-
-### 9. Uso de Token de Autenticação
-O token é a “chave” que permite acessar áreas protegidas. O teste faz login, pega o token e usa ele para fazer o checkout, simulando um usuário real.
-
-```js
-'Authorization': `Bearer ${token}`
-```
-
----
-
-### 10. Data-Driven Testing (Teste Orientado a Dados)
-É como testar várias receitas diferentes: o teste faz checkouts com diferentes produtos, quantidades e métodos de pagamento, tudo em um só teste.
-
-```js
-cenariosCheckout.forEach((cenario) => { ... })
-```
-
----
-
-### 11. Groups (Agrupamentos)
-Groups são como capítulos de um livro: cada parte do teste (cadastro, login, checkout) fica organizada, facilitando a leitura dos resultados.
-
-```js
-group('Cadastro do Usuário', ...)
-group('Login do Usuário', ...)
-group('Checkout Produto ...', ...)
-```
-
----
-
-Esses conceitos juntos tornam o teste robusto, realista e fácil de entender, mesmo para quem está começando!
-
-## Como rodar o teste de performance com K6
-
-Execute o comando abaixo para rodar o teste principal:
-```bash
-k6 run --env BASE_URL=http://localhost:3000 tests/k6/checkout.test.js
-```
-
-Você pode alterar o valor de BASE_URL conforme o ambiente desejado.
-
-Consulte os comentários no arquivo `tests/k6/checkout.test.js` para entender cada etapa do fluxo!
-Se tiver dúvidas, consulte os comentários no próprio arquivo do teste para entender cada etapa!

@@ -1,1 +1,0 @@
-No meu script k6, preciso que a URL base seja configurável. Crie uma constante BASE_URL que obtenha seu valor da variável de ambiente BASE_URL do k6. Se a variável de ambiente não estiver definida, use 'http://localhost:3000' como valor padrão"

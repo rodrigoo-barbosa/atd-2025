@@ -1,10 +1,12 @@
 
 import http from 'k6/http';
-import { check, group, sleep } from 'k6';
+import { check, group } from 'k6';
 import { Trend } from 'k6/metrics';
 import { getBaseURL } from './helpers/baseURL.js';
 import { gerarEmailAleatorio, gerarNomeAleatorio, gerarSenhaAleatoria } from './helpers/fakerHelper.js';
 import { login } from './helpers/login.js';
+// HTML report generator (community)
+import { htmlReport } from 'https://raw.githubusercontent.com/benc-uk/k6-reporter/main/dist/bundle.js';
 
 // Stages: define a evolução dos usuários virtuais ao longo do teste
 export const options = {
@@ -20,18 +22,18 @@ export const options = {
     },
 };
 
-// Trend: métrica customizada para medir o tempo do checkout
+// Trend (É uma métrica customizada para medir o tempo do checkout)
 const tempoCheckout = new Trend('tempo_checkout');
 
 // Dados para Data-Driven Testing
 const cenariosCheckout = [
     { produtoId: 1, quantidade: 1, metodoPagamento: 'cash' },
-    { produtoId: 2, quantidade: 5, metodoPagamento: 'credit_card' }, // Menos que o estoque disponível
-    { produtoId: 3, quantidade: 1, metodoPagamento: 'cash' }, // Menos que o estoque disponível
+    { produtoId: 2, quantidade: 5, metodoPagamento: 'credit_card' }, 
+    { produtoId: 3, quantidade: 1, metodoPagamento: 'cash' }, 
 ];
 
 export default function () {
-    // Resetar estoque antes de iniciar o teste
+    // Funçao implementada para resolve o problema de falta de estoque dos produros
     group('Resetar estoque', function () {
         const url = `${getBaseURL()}/products/reset-stock`;
         const resposta = http.post(url, null, { headers: { 'Content-Type': 'application/json' } });
@@ -82,10 +84,6 @@ export default function () {
             const resposta = http.post(url, payload, params);
             respostaCheckout = resposta; // Reaproveitamento de resposta
             tempoCheckout.add(resposta.timings.duration); // Trend
-            // Log detalhado apenas em caso de falha
-            if (!(resposta.status === 200 || resposta.status === 201) || resposta.json('data.id') === undefined) {
-                console.error(`FALHA Checkout Produto ${cenario.produtoId}: status=${resposta.status}, body=${resposta.body}`);
-            }
             check(resposta, {
                 'Checkout retornou 200 ou 201': (r) => r.status === 200 || r.status === 201,
                 'Resposta contém ID': (r) => r.json('data.id') !== undefined,
@@ -107,4 +105,11 @@ export default function () {
         });
     });
 
+}
+
+// Geração de relatório HTML ao final da execução
+export function handleSummary(data) {
+    return {
+        'reports/checkout.html': htmlReport(data),
+    };
 }
