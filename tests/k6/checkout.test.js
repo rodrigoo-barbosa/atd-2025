@@ -31,6 +31,14 @@ const cenariosCheckout = [
 ];
 
 export default function () {
+    // Resetar estoque antes de iniciar o teste
+    group('Resetar estoque', function () {
+        const url = `${getBaseURL()}/products/reset-stock`;
+        const resposta = http.post(url, null, { headers: { 'Content-Type': 'application/json' } });
+        check(resposta, {
+            'Estoque resetado': (r) => r.status === 200 && r.json('success') === true,
+        });
+    });
     // Helpers/Faker: geração de dados aleatórios
     const email = gerarEmailAleatorio();
     const senha = gerarSenhaAleatoria();

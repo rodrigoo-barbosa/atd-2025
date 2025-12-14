@@ -36,6 +36,14 @@ const initializeProducts = () => {
 // Initialize products when module is loaded
 initializeProducts();
 
+function resetStock() {
+  // Redefine o estoque dos produtos para o valor inicial
+  products.length = 0;
+  products.push(new Product(1, 'Laptop', 'High-performance laptop for work and gaming', 999.99, 50));
+  products.push(new Product(2, 'Smartphone', 'Latest model smartphone with advanced features', 699.99, 30));
+  products.push(new Product(3, 'Headphones', 'Wireless noise-canceling headphones', 199.99, 100));
+}
+
 module.exports = {
   Product,
   products,
@@ -45,5 +53,6 @@ module.exports = {
     const product = new Product(id, data.name, data.description, data.price, data.stock);
     products.push(product);
     return product.toJSON();
-  }
+  },
+  resetStock
 };

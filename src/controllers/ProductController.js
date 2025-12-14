@@ -19,4 +19,14 @@ async function create(req, res) {
   }
 }
 
-module.exports = { getAll, create };
+async function resetStock(req, res) {
+  try {
+    const Product = require('../models/Product');
+    Product.resetStock();
+    res.json({ success: true, message: 'Estoque resetado com sucesso!' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+}
+
+module.exports = { getAll, create, resetStock };
