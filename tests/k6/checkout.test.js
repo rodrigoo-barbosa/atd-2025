@@ -5,7 +5,6 @@ import { Trend } from 'k6/metrics';
 import { getBaseURL } from './helpers/baseURL.js';
 import { gerarEmailAleatorio, gerarNomeAleatorio, gerarSenhaAleatoria } from './helpers/fakerHelper.js';
 import { login } from './helpers/login.js';
-// HTML report generator (community)
 import { htmlReport } from 'https://raw.githubusercontent.com/benc-uk/k6-reporter/main/dist/bundle.js';
 
 // Stages: define a evolução dos usuários virtuais ao longo do teste
@@ -105,5 +104,12 @@ export default function () {
         });
     });
 
+}
+
+// Gera relatório HTML 
+export function handleSummary(data) {
+    return {
+        'reports/checkout.html': htmlReport(data),
+    };
 }
 
