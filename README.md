@@ -431,3 +431,144 @@ src/
 ## License
 
 ISC License
+
+## Teste de Performance com K6: Explicação dos Conceitos
+
+
+## Teste de Performance com K6: Conceitos Explicados de Forma Lúdica
+
+Se você está começando com testes de performance usando K6, aqui vai uma explicação lúdica e didática de cada conceito aplicado no teste checkout.test.js:
+
+---
+
+### 1. Thresholds (Limiares)
+Imagine que você está em uma corrida e quer garantir que 95% dos corredores terminem em menos de 2 minutos. No teste, thresholds são essas “metas de tempo” para as requisições. No código, definimos que 95% das respostas devem ser rápidas (menos de 2 segundos), e que pelo menos 95% dos testes devem passar.
+
+```js
+thresholds: {
+  http_req_duration: ['p(95)<2000'],
+  'tempo_checkout': ['p(95)<2000'],
+  'checks': ['rate>0.95'],
+}
+```
+
+---
+
+### 2. Checks (Verificações)
+Checks são como fiscais que conferem se tudo está certo após cada etapa. Eles verificam, por exemplo, se o cadastro retornou sucesso, se o login trouxe um token e se o checkout foi realizado corretamente.
+
+```js
+check(resposta, { 'Cadastro retornou 201': (r) => r.status === 201 });
+check(token, { 'Token recebido': (t) => typeof t === 'string' && t.length > 10 });
+check(resposta, { 'Checkout retornou 200 ou 201': (r) => r.status === 200 || r.status === 201 });
+```
+
+---
+
+### 3. Helpers (Ajudantes)
+Helpers são como pequenos robôs que fazem tarefas repetitivas para você: gerar dados aleatórios, montar a URL base, fazer login, etc. Eles deixam o código mais limpo e fácil de entender.
+
+```js
+import { getBaseURL } from './helpers/baseURL.js';
+import { gerarEmailAleatorio, gerarNomeAleatorio, gerarSenhaAleatoria } from './helpers/fakerHelper.js';
+import { login } from './helpers/login.js';
+```
+
+---
+
+### 4. Trends (Tendências)
+Trends são como um diário que anota quanto tempo cada checkout levou. Assim, depois do teste, você pode ver se o sistema ficou mais rápido ou mais lento.
+
+```js
+const tempoCheckout = new Trend('tempo_checkout');
+tempoCheckout.add(resposta.timings.duration);
+```
+
+---
+
+### 5. Faker (Geração de Dados Aleatórios)
+Faker é o mágico que cria nomes, e-mails e senhas diferentes a cada teste, simulando usuários reais. Isso evita que os testes fiquem repetitivos e ajuda a encontrar problemas.
+
+```js
+const email = gerarEmailAleatorio();
+const senha = gerarSenhaAleatoria();
+const nome = gerarNomeAleatorio();
+```
+
+---
+
+### 6. Variável de Ambiente
+É como um post-it na sua mesa dizendo “hoje teste no servidor X”. Usamos variáveis de ambiente para mudar a URL da API sem mexer no código.
+
+```js
+getBaseURL() // Usa __ENV.BASE_URL se definido
+check(__ENV.BASE_URL, { 'BASE_URL está definida': (v) => v !== undefined });
+```
+
+---
+
+### 7. Stages (Estágios)
+Stages são o roteiro do teste: “comece devagar, aumente a quantidade de usuários, depois diminua”. Assim, você simula o movimento de pessoas entrando e saindo da loja.
+
+```js
+stages: [
+  { duration: '5s', target: 1 },
+  { duration: '10s', target: 1 },
+  { duration: '5s', target: 0 },
+]
+```
+
+---
+
+### 8. Reaproveitamento de Resposta
+É como guardar o recibo da última compra para conferir depois. O teste salva a resposta do checkout e faz verificações extras nela no final.
+
+```js
+respostaCheckout = resposta; // Salva última resposta
+check(respostaCheckout, { 'Checkout tem status 200 ou 201': ... });
+```
+
+---
+
+### 9. Uso de Token de Autenticação
+O token é a “chave” que permite acessar áreas protegidas. O teste faz login, pega o token e usa ele para fazer o checkout, simulando um usuário real.
+
+```js
+'Authorization': `Bearer ${token}`
+```
+
+---
+
+### 10. Data-Driven Testing (Teste Orientado a Dados)
+É como testar várias receitas diferentes: o teste faz checkouts com diferentes produtos, quantidades e métodos de pagamento, tudo em um só teste.
+
+```js
+cenariosCheckout.forEach((cenario) => { ... })
+```
+
+---
+
+### 11. Groups (Agrupamentos)
+Groups são como capítulos de um livro: cada parte do teste (cadastro, login, checkout) fica organizada, facilitando a leitura dos resultados.
+
+```js
+group('Cadastro do Usuário', ...)
+group('Login do Usuário', ...)
+group('Checkout Produto ...', ...)
+```
+
+---
+
+Esses conceitos juntos tornam o teste robusto, realista e fácil de entender, mesmo para quem está começando!
+
+## Como rodar o teste de performance com K6
+
+Execute o comando abaixo para rodar o teste principal:
+```bash
+k6 run --env BASE_URL=http://localhost:3000 tests/k6/checkout.test.js
+```
+
+Você pode alterar o valor de BASE_URL conforme o ambiente desejado.
+
+Consulte os comentários no arquivo `tests/k6/checkout.test.js` para entender cada etapa do fluxo!
+Se tiver dúvidas, consulte os comentários no próprio arquivo do teste para entender cada etapa!

@@ -1,8 +1,9 @@
-const http = require('k6/http');
-const { check } = require('k6');
-const { getBaseURL } = require('./baseURL.js');
 
-function login(email, password) {
+import http from 'k6/http';
+import { check } from 'k6';
+import { getBaseURL } from './baseURL.js';
+
+export function login(email, password) {
     const url = `${getBaseURL()}/auth/login`;
     const payload = JSON.stringify({ email, password });
     const params = { headers: { 'Content-Type': 'application/json' } };
@@ -13,5 +14,3 @@ function login(email, password) {
     });
     return res.json('data.token');
 }
-
-module.exports = { login };
