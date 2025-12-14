@@ -223,7 +223,16 @@ k6 run --env BASE_URL=http://localhost:3000 tests/k6/checkout.test.js
 ---
 ### Relatório HTML do k6
 
-O teste gera um relatório HTML ao final da execução usando `handleSummary` e o pacote comunitário `k6-reporter`.
+Abre o relatório direto no navegador
+```bash
+npm run k6:report
+```
+
+Rodar o teste e abrir o relatório logo depois:
+```bash
+k6 run --env BASE_URL=http://localhost:3000 tests/k6/checkout.test.js
+start "" reports\checkout.html
+```
 
 Aplicação no código de teste:
 ```js

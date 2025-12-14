@@ -107,9 +107,3 @@ export default function () {
 
 }
 
-// Geração de relatório HTML ao final da execução
-export function handleSummary(data) {
-    return {
-        'reports/checkout.html': htmlReport(data),
-    };
-}
