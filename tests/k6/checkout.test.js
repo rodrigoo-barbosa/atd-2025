@@ -66,7 +66,7 @@ export default function () {
         });
     });
 
-    // Data-Driven Testing: múltiplos cenários de checkout
+    // Data-Driven Testing - múltiplos cenários de checkout
     cenariosCheckout.forEach((cenario) => {
         group(`Checkout Produto ${cenario.produtoId} (${cenario.metodoPagamento})`, function () {
             const url = `${getBaseURL()}/checkout`;
